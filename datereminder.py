@@ -60,8 +60,12 @@ for row in ss[1:]:
             daystext = " in " + str(days) + " day"
             if days > 1:
                 daystext += "s"
+            elif days == 0:
+                daystext = " today"
             if record['type'].lower().strip() == 'birthday':
                 text = ':birthday: ' + record['text'] + " has a birthday" + daystext + " on " + record['mm-dd']
+            elif record['type'].lower().strip() == 'work anniversary':
+                text = ':partyparrot: ' + record['text'] + " has a work anniversary" + daystext + " on " + record['mm-dd']
             else:
                 text = record['text'] + daystext + " on " + record['mm-dd']
             print record['channel'], text
