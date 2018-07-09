@@ -21,16 +21,25 @@ except:
     print "Unable to read config file."
     sys.exit(0)
 
+
 def slack(chan, text):
     payload = {
-        "text":text,
+        "text": text,
         "channel": chan,
         "icon_emoji": config['icon_emoji'],
         "username": config['username']
     }
-    slackr = requests.post(config['webhook'], data = json.dumps(payload))
+    slackr = requests.post(config['webhook'], data=json.dumps(payload))
     print "Slack response:", slackr.text
     time.sleep(1)
+
+
+def is_valid_year(year):
+    if year and year.isdigit():
+        if int(year) >= 1900 and int(year) <= 2100:
+            return True
+    return False
+
 
 csv_r = requests.get(config['downloadurl'])
 if csv_r.status_code != 200:
@@ -40,21 +49,29 @@ if csv_r.status_code != 200:
 ss = list(csv.reader(csv_r.text.split('\n')))
 header = ss[0]
 headerN = {}
-for cellN in range(0,len(header)):
+for cellN in range(0, len(header)):
     headerN[header[cellN].strip().lower()] = cellN
 
 for row in ss[1:]:
     record = {}
-    for n in range(0,len(row)):
+    for n in range(0, len(row)):
         for hcol in headerN.keys():
             if headerN[hcol] == n:
                 if row[n].strip() != '':
                     record[hcol] = row[n]
-    if all(col in record.keys() for col in ['mm-dd', 'type', 'channel', 'days prior', 'text']):
+    if all(col in record.keys()
+           for col in ['mm-dd', 'type', 'channel', 'days prior', 'text']):
         #print "Valid Record", record
-        rec_date_obj = datetime.strptime(yyyy + "-" + record['mm-dd'], "%Y-%m-%d")
-        rec_alert_date_obj = datetime.strptime(yyyy + "-" + record['mm-dd'], "%Y-%m-%d") - \
-            timedelta(days=int(record['days prior']))
+        rec_date_obj = datetime.strptime(yyyy + "-" + record['mm-dd'],
+                                         "%Y-%m-%d")
+        if 'year' in record.keys() and is_valid_year(record['year']):
+            rec_alert_date_obj = datetime.strptime(
+                record['year'] + "-" + record['mm-dd'],
+                "%Y-%m-%d") - timedelta(days=int(record['days prior']))
+        else:
+            rec_alert_date_obj = datetime.strptime(
+                yyyy + "-" + record['mm-dd'],
+                "%Y-%m-%d") - timedelta(days=int(record['days prior']))
         if todayObj >= rec_alert_date_obj and todayObj <= rec_date_obj:
             days = (rec_date_obj - todayObj).days
             daystext = " in " + str(days) + " day"
