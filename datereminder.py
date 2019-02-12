@@ -1,6 +1,5 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 import yaml
-import requests
 import requests
 import csv
 import sys
@@ -10,15 +9,16 @@ from os.path import expanduser
 import time
 
 config_file = expanduser("~") + "/.datereminder/config.yml"
-print config_file
+#print (config_file)
 mmdd = datetime.now().strftime("%m-%d")
 yyyy = datetime.now().strftime("%Y")
 yyyymmdd = date = datetime.now().strftime("%Y-%m-%d")
 todayObj = datetime.strptime(yyyymmdd, "%Y-%m-%d")
+#print(todayObj)
 try:
     config = yaml.safe_load(open(config_file))
 except:
-    print "Unable to read config file."
+    print ("Unable to read config file.")
     sys.exit(0)
 
 
@@ -30,7 +30,7 @@ def slack(chan, text):
         "username": config['username']
     }
     slackr = requests.post(config['webhook'], data=json.dumps(payload))
-    print "Slack response:", slackr.text
+    print ("Slack response:", slackr.text)
     time.sleep(1)
 
 
@@ -43,10 +43,12 @@ def is_valid_year(year):
 
 csv_r = requests.get(config['downloadurl'])
 if csv_r.status_code != 200:
-    print "Unable fo fetch spreadsheet. Not a 200 status code."
+    print ("Unable fo fetch spreadsheet. Not a 200 status code.")
     sys.exit(0)
+print("Loaded CSV")
 
 ss = list(csv.reader(csv_r.text.split('\n')))
+#print(ss)
 header = ss[0]
 headerN = {}
 for cellN in range(0, len(header)):
@@ -61,17 +63,20 @@ for row in ss[1:]:
                     record[hcol] = row[n]
     if all(col in record.keys()
            for col in ['mm-dd', 'type', 'channel', 'days prior', 'text']):
-        #print "Valid Record", record
-        rec_date_obj = datetime.strptime(yyyy + "-" + record['mm-dd'],
-                                         "%Y-%m-%d")
+#        print ("Valid Record", record)
         if 'year' in record.keys() and is_valid_year(record['year']):
+            rec_date_obj = datetime.strptime(record['year'] + "-" + record['mm-dd'],
+                                             "%Y-%m-%d")
             rec_alert_date_obj = datetime.strptime(
                 record['year'] + "-" + record['mm-dd'],
                 "%Y-%m-%d") - timedelta(days=int(record['days prior']))
         else:
+            rec_date_obj = datetime.strptime(yyyy + "-" + record['mm-dd'],
+                                             "%Y-%m-%d")
             rec_alert_date_obj = datetime.strptime(
                 yyyy + "-" + record['mm-dd'],
                 "%Y-%m-%d") - timedelta(days=int(record['days prior']))
+#        print(todayObj, " | ", rec_alert_date_obj, " | ", rec_date_obj)
         if todayObj >= rec_alert_date_obj and todayObj <= rec_date_obj:
             days = (rec_date_obj - todayObj).days
             daystext = " in " + str(days) + " day"
@@ -85,5 +90,5 @@ for row in ss[1:]:
                 text = ':partyparrot: ' + record['text'] + " has a work anniversary" + daystext + " on " + record['mm-dd']
             else:
                 text = record['text'] + daystext + " on " + record['mm-dd']
-            print record['channel'], text
+            print (record['channel'], text)
             slack(record['channel'], text)
